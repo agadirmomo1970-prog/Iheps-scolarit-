@@ -1,0 +1,39 @@
+# =============================================================================
+# Déploiement Render — IHEPS AGADIR Scolarité
+# Blueprint : https://render.com/docs/blueprint-spec
+# =============================================================================
+databases:
+  - name: iheps-db
+    databaseName: iheps
+    user: iheps
+    plan: free
+    region: frankfurt
+
+services:
+  - type: web
+    name: iheps-scolarite
+    runtime: python
+    plan: free
+    region: frankfurt
+    branch: main
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    # init-db est idempotent : il crée les tables, les paramètres de
+    # l'établissement et le compte administrateur s'ils n'existent pas encore.
+    startCommand: flask --app wsgi init-db && gunicorn wsgi:app --bind 0.0.0.0:$PORT --workers 2 --threads 2 --timeout 120
+    healthCheckPath: /sante
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.7"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: iheps-db
+          property: connectionString
+      - key: SESSION_COOKIE_SECURE
+        value: "1"
+      - key: ADMIN_USERNAME
+        value: responsable
+      - key: ADMIN_PASSWORD
+        sync: false
